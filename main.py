@@ -22,7 +22,7 @@ class MyUi(QMainWindow):
         super(MyUi, self).__init__()
         self.ui = layout.Ui_MainWindow()
         self.ui.setupUi(self)
-        initStockBasic()
+        self.initStockBasic()
         cwd = os.getcwd()
         cwd = str(cwd)
         if os.path.isfile(cwd+"/time"):
@@ -158,7 +158,7 @@ class MyUi(QMainWindow):
         print(dataInfoPath)
         if os.path.exists(dataInfoPath):
             print('-------读取本地--------')
-            stockBasicInfo = pd.read_csv(dataInfoName)
+            stockBasicInfo = pd.read_csv(dataInfoPath)
             stock_name_list = stockBasicInfo['name']
             stock_index = stockBasicInfo['code'].apply(str)
         else:
