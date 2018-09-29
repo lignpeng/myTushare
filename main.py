@@ -16,6 +16,9 @@ import warnings
 warnings.filterwarnings("ignore")
 list1 = []
 
+def printInfo(infoStr = None):
+    if (not infoStr is None) and len(infoStr)>0:
+        print('输出：' + infoStr + '-----')
 
 class MyUi(QMainWindow):
     def __init__(self):
@@ -23,93 +26,37 @@ class MyUi(QMainWindow):
         self.ui = layout.Ui_MainWindow()
         self.ui.setupUi(self)
         self.initStockBasic()
-        cwd = os.getcwd()
-        cwd = str(cwd)
-        if os.path.isfile(cwd+"/time"):
-            with open("time","r") as outfile:#reads current time
-                history = cPickle.load(outfile)
-            if (datetime.now()-history).total_seconds()<43200: #measures if time elapse>12 hours
-                print("Less than 12 hours. Loading previously saved Pickle...")
-                #with open("time","w") as infile: #update time
-                    #cPickle.dump(datetime.now(),infile)
-            else:
-                print("More than 12 hours. Updating Pickle...")
-                data = df()
-                # data = ts.get_industry_classified()
-                with open("class","w+") as outfile:
-                    cPickle.dump(data,outfile)
-                now = datetime.now()
-                with open("time", "w+") as outfile: #update time
-                    cPickle.dump(now, outfile)
-        else:
-            print("No Pickle found!") #If this is first time using tuchart in this directory
-            data = df()
-            data = ts.get_industry_classified()
-            with open('class', 'w+') as outfile: #records pickle
-                cPickle.dump(data, outfile)
-            now = datetime.now()
-            with open("time", "w+") as outfile:
-                cPickle.dump(now,outfile)
-
-        with open("class", "r") as infile:  # reads current time
-            series = cPickle.load(infile)
-        #series = pd.read_json(cwd + "\\class.json")
-        #series = ts.get_industry_classified()
-        series = pd.DataFrame(series)
-
         curdate = time.strftime("%Y/%m/%d")  # gets current time to put into dateedit
         curdateQ = QDate.fromString(curdate,"yyyy/MM/dd")
-
         dateobj = datetime.strptime(curdate, "%Y/%m/%d")#converts to datetime object
-
         past = dateobj - timedelta(days = 7)  #minus a week to start date
         pasttime = datetime.strftime(past, "%Y/%m/%d")
         pastQ = QDate.fromString(pasttime,"yyyy/MM/dd") #convert to qtime so that widget accepts the values
-
-
-
         pastL = dateobj - timedelta(days=30)  # minus a month to start date
         pasttimeL = datetime.strftime(pastL, "%Y/%m/%d")
         pastQL = QDate.fromString(pasttimeL, "yyyy/MM/dd")
-
-
-        np_indexes = np.array([['sh', '上证指数', '大盘指数'],
-                               ['sz', '深证成指', '大盘指数'],
-                               ['hs300', '沪深300指数', '大盘指数'],
-                               ['sz50', '上证50', '大盘指数'],
-                               ['zxb', '中小板', '大盘指数'],
-                               ['cyb', '创业板', '大盘指数']])
-        indexes = df(data=np_indexes,
-                     index=range(5000, 5006),
-                     columns=["code", "name", "c_name"])
-        series = indexes.append(series)
-        list1_bfr = series["c_name"].tolist()  #Get industry categories. Filters out redundant ones
-        list1 = list(set(list1_bfr))
-        list1.sort(key=list1_bfr.index)
-        #w = database()
-        #zsparent = QTreeWidgetItem(self.ui.treeWidget)
-        #zsparent.setText(0,"股票指数")
-        #zsnames =["上证指数-sh","深圳成指-sz","沪深300指数-hs300","上证50-"]
-
-        self.init_treeWidget(list1,series)
-
+        # np_indexes = np.array([['sh', '上证指数', '大盘指数'],
+        #                        ['sz', '深证成指', '大盘指数'],
+        #                        ['hs300', '沪深300指数', '大盘指数'],
+        #                        ['sz50', '上证50', '大盘指数'],
+        #                        ['zxb', '中小板', '大盘指数'],
+        #                        ['cyb', '创业板', '大盘指数']])
+        self.updateStockList()
         self.ui.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.treeWidget.customContextMenuRequested.connect(self.openMenu)
 
         #self.ui.webView.setGeometry(QtCore.QRect(0, 30,1550, 861))
-        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/render.html")) #path to read html file
-        local_url = QUrl.fromLocalFile(file_path)
-        self.ui.webView.load(local_url)
+        # file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/render.html")) #path to read html file
+        # local_url = QUrl.fromLocalFile(file_path)
+        # self.ui.webView.load(local_url)
         #self.ui.commandLinkButton.setFixedSize(50, 50)
-        self.ui.search_btn.clicked.connect(lambda: self.search_comp(series))
-        self.ui.init_code_btn.clicked.connect(lambda: self.code_sort_tree(series))
-        self.ui.init_category_btn.clicked.connect(lambda: self.init_treeWidget(list1, series))
+        # self.ui.search_btn.clicked.connect(lambda: self.search_comp(series))
+        self.ui.update_stocklist_btn.clicked.connect(self.updateStockList)
+        # self.ui.init_category_btn.clicked.connect(self.updateStockList)
 
         self.ui.commandLinkButton.clicked.connect(self.classify)  #when the arrow button is clicked, trigger events
         self.ui.refreshButton.clicked.connect(self.refreshWeb)
 
-        #self.ui.commandLinkButton.clicked.connect(lambda action: self.classify(action, self.ui.treewidget))
-        #  QSizePolicy
         try:
             retain_size = self.ui.dateEdit_2.sizePolicy()
             retain_size.setRetainSizeWhenHidden(True)
@@ -133,26 +80,25 @@ class MyUi(QMainWindow):
         #self.ui.toolbutton.clicked.connect(lambda action: self.graphmerge(action, CombineKeyword))
         self.ui.combobox.currentIndexChanged.connect(lambda: self.modifycombo(pastQL,pastQ))
 
-    def init_treeWidget(self, list1, series):
+    def init_treeWidget(self, dic):
         self.ui.treeWidget.clear()
-        for j in list1:
-            parent = QTreeWidgetItem(self.ui.treeWidget)  #populate treewidget with names
-            parent.setText(0,j)
-            var = series.loc[series["c_name"] == j]
-            list2 = var["code"].tolist()
-            name = var["name"].tolist()
-            #var = showcollection(i) #Display database items
-            for idx,val in enumerate(list2):
+        if dic is None or not dic:
+            return#校验传参是否正确
+# 枚举字典，key，值
+        for title,list1 in dic.items():
+            parent = QTreeWidgetItem(self.ui.treeWidget)
+            parent.setText(0,title)
+            print(title)
+            print(type(list1))
+            for index,name in enumerate(list1):
                 child = QTreeWidgetItem(parent)
-                child.setText(0, name[idx]+"-"+str(val))
-                #for i in Drag:
-                    #grandson = QTreeWidgetItem(child)     #Commented out because increases program response time
-                    #grandson.setText(0, i)
-        #self.ui.treeWidget.itemDoubleClicked.connect(self.onClickItem) #Display Collection items
-
+                # print(index)
+                # print(name)
+                child.setText(0,name)
     #获取股票列表
     def initStockBasic(useNet=True):
-        global stock_name_list,stock_index
+        global stock_dic
+        # stock_name_list,stock_index
         dataInfoName = "data/stockinfo.csv"
         dataInfoPath = os.path.abspath(os.path.join(os.path.dirname(__file__), dataInfoName))
         print(dataInfoPath)
@@ -169,6 +115,15 @@ class MyUi(QMainWindow):
             stock_index = stockBasicInfo.index
             # stockBasicInfo.to_sql('tick_data',self.connection)
             stockBasicInfo.to_csv(dataInfoPath,encoding="utf8")
+        list1 = []
+        for i in range(len(stock_index)):
+            list1.append(stock_name_list[i] +'-'+ str(stock_index[i]).zfill(6))
+        stock_dic = {}
+        stock_dic['所有'] = list1
+        # print(stock_dic)
+    def updateStockList(self):
+        printInfo('更新')
+        self.init_treeWidget(stock_dic)
     def code_sort_tree(self, companies):
         self.ui.treeWidget.clear()
         sorted_comps = companies.sort_values(["code"])
@@ -243,6 +198,8 @@ class MyUi(QMainWindow):
         indexes = self.ui.treeWidget.selectedIndexes()
         item = self.ui.treeWidget.itemAt(position)
         db_origin = ""
+        if item is None:
+            return
         #if item.parent():
          #   db_origin = item.parent().text(0)
         collec = str(item.text(0).encode("utf-8"))
@@ -295,20 +252,10 @@ class MyUi(QMainWindow):
         menu.exec_(self.ui.treeWidget.viewport().mapToGlobal(position))
 
     def methodSelected(self, action, collec):
-        # print(action.text()) #Choice
-        # if (self.ui.treewidget.count() == 5):
-        #   self.ui.label.setText("Maximum number of queries")
-        #   return
-        # self.ui.label.setText("")
         Choice = action.text()
         Stock = collec
-        # print(collec)  #Stock Name
-        # print(db_origin)  #DataBase name
-        # list1 = [self.tr(Stock+"-"+Choice+"-"+db_origin)]
-        # self.ui.treewidget.addItems(list1)
         parent = QTreeWidgetItem(self.ui.treeWidget_2)
         parent.setText(0, Stock.decode("utf-8") + "-" + Choice)
-
 
     def openWidgetMenu(self,position):
         indexes = self.ui.treeWidget_2.selectedIndexes()
@@ -346,8 +293,8 @@ class MyUi(QMainWindow):
         local_url = QUrl.fromLocalFile(file_path)
         self.ui.webView.load(local_url)
         # self.ui.webView.reload()
+#展示对应stock的图表
     def classify(self, folder):
-
         startdate = self.ui.dateEdit.date()
         startdate = startdate.toPyDate()
         startdate = startdate.strftime("%Y/%m/%d")#converts date from dateedit to tushare readable date
@@ -372,6 +319,11 @@ class MyUi(QMainWindow):
         #items = ([x.encode("utf-8") for x in labels])
         width = self.ui.webView.width()#give width and height of user's screen so that graphs can be generated with dynamic size
         height = self.ui.webView.height()
+        # print('------labels------')
+        print(labels)
+        # print('-------ption------')
+        print(option)
+        #labels:[u'名称-600462-Kline'] option：类型，D
         graphpage(labels, startdate,enddate,option,width, height)#labels:复权ork线or分笔 option:hfq, qfq or 15, 30, D, etc
         # self.ui.webView.reload()#refreshes webengine
         # self.ui.webView.repaint()
@@ -379,6 +331,7 @@ class MyUi(QMainWindow):
         file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/render.html")) #path to read html file
         local_url = QUrl.fromLocalFile(file_path)
         self.ui.webView.load(local_url)
+
     def graphmerge(self, combineKeyword):
         sth = ""
         for i in combineKeyword:
