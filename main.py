@@ -4,7 +4,7 @@ import os,sys,sip,time
 from datetime import datetime,timedelta
 from qtpy.QtWidgets import QTreeWidgetItem,QMenu,QApplication,QAction,QMainWindow
 from qtpy import QtGui,QtWidgets
-from qtpy.QtCore import Qt,QUrl,QDate
+from qtpy.QtCore import Qt,QUrl,QDate,QUrlQuery
 from Graph import graphpage
 import layout
 from pandas import DataFrame as df
@@ -13,6 +13,10 @@ import tushare as ts
 import cPickle
 import numpy as np
 import warnings
+import re
+import time
+import json
+
 warnings.filterwarnings("ignore")
 list1 = []
 
@@ -324,13 +328,60 @@ class MyUi(QMainWindow):
         # print('-------ption------')
         print(option)
         #labels:[u'名称-600462-Kline'] option：类型，D
-        graphpage(labels, startdate,enddate,option,width, height)#labels:复权ork线or分笔 option:hfq, qfq or 15, 30, D, etc
-        # self.ui.webView.reload()#refreshes webengine
-        # self.ui.webView.repaint()
-        # self.ui.webView.update()
-        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/render.html")) #path to read html file
+        # graphpage(labels, startdate,enddate,option,width, height)#labels:复权ork线or分笔 option:hfq, qfq or 15, 30, D, etc
+        # # self.ui.webView.reload()#refreshes webengine
+        # # self.ui.webView.repaint()
+        # # self.ui.webView.update()
+        # file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/render.html")) #path to read html file
+        # local_url = QUrl.fromLocalFile(file_path)
+        # self.ui.webView.load(local_url)
+        print(startdate)
+        code = ''
+        for index,tt in enumerate(labels):
+            print(tt)
+            arr = re.split('-',tt)
+            code = arr[1]
+            self.downloadData(arr[1],startdate,enddate,option)
+        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/kshape/index.html")) #path to read html file
         local_url = QUrl.fromLocalFile(file_path)
+        print(type(local_url))
+        query = QUrlQuery()
+        query.addQueryItem('code',code)
+        query.addQueryItem('ktype',option)
+        local_url.setQuery(query)
+        # local_url = local_url
+        print(local_url)
         self.ui.webView.load(local_url)
+
+    def downloadData(self,stocknumber,startdate,enddate,type='D'):
+        startdata = startdate.encode("ascii").replace("/","-").replace("\n","")
+        print(startdata)
+#convert to tushare readable date
+# j = re.split("-",i)
+        enddata = enddate.encode("ascii").replace("/","-").replace("\n","")
+        print(enddata)
+        print(stocknumber)
+
+        array = ts.get_k_data(stocknumber, start=startdata, end=enddata, ktype=type)
+        if array is None or array.empty:
+            return
+        print(array)
+        array = array.sort_index()
+        # Date = array.index.format()
+        Date = array['date'].tolist()
+        Open = array["open"].tolist()
+        Close = array["close"].tolist()
+        High = array["high"].tolist()
+        Low = array["low"].tolist()
+        Candlestick = zip(*[Date, Open, Close, Low, High])
+        fileName = 'index/kshape/data/' + stocknumber + '-' + type + '.json'
+        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), fileName))
+        print(file_path)
+        if not os.path.exists(file_path):
+            os.system(r'touch {}'.format(file_path))
+        with open(file_path,"w") as f:
+            json.dump(Candlestick,f)
+            printInfo('下载数据保存成功')
 
     def graphmerge(self, combineKeyword):
         sth = ""
