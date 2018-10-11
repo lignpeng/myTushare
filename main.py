@@ -39,26 +39,10 @@ class MyUi(QMainWindow):
         pastL = dateobj - timedelta(days=30)  # minus a month to start date
         pasttimeL = datetime.strftime(pastL, "%Y/%m/%d")
         pastQL = QDate.fromString(pasttimeL, "yyyy/MM/dd")
-        # np_indexes = np.array([['sh', '上证指数', '大盘指数'],
-        #                        ['sz', '深证成指', '大盘指数'],
-        #                        ['hs300', '沪深300指数', '大盘指数'],
-        #                        ['sz50', '上证50', '大盘指数'],
-        #                        ['zxb', '中小板', '大盘指数'],
-        #                        ['cyb', '创业板', '大盘指数']])
+
         self.updateStockList()
-        self.ui.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.ui.treeWidget.customContextMenuRequested.connect(self.openMenu)
-
-        #self.ui.webView.setGeometry(QtCore.QRect(0, 30,1550, 861))
-        # file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/render.html")) #path to read html file
-        # local_url = QUrl.fromLocalFile(file_path)
-        # self.ui.webView.load(local_url)
-        #self.ui.commandLinkButton.setFixedSize(50, 50)
-        # self.ui.search_btn.clicked.connect(lambda: self.search_comp(series))
+        self.ui.treeWidget.itemDoubleClicked.connect(self.addStockClickAction)
         self.ui.update_stocklist_btn.clicked.connect(self.updateStockList)
-        # self.ui.init_category_btn.clicked.connect(self.updateStockList)
-
-        self.ui.commandLinkButton.clicked.connect(self.classify)  #when the arrow button is clicked, trigger events
         self.ui.refreshButton.clicked.connect(self.refreshWeb)
 
         try:
@@ -81,7 +65,8 @@ class MyUi(QMainWindow):
         self.ui.treeWidget_2.setDragDropMode(self.ui.treeWidget_2.InternalMove)
         self.ui.treeWidget_2.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.treeWidget_2.customContextMenuRequested.connect(self.openWidgetMenu)
-        #self.ui.toolbutton.clicked.connect(lambda action: self.graphmerge(action, CombineKeyword))
+        #双击事件
+        self.ui.treeWidget_2.itemDoubleClicked.connect(self.showGraph)
         self.ui.combobox.currentIndexChanged.connect(lambda: self.modifycombo(pastQL,pastQ))
 
     def init_treeWidget(self, dic):
@@ -125,6 +110,7 @@ class MyUi(QMainWindow):
         stock_dic = {}
         stock_dic['所有'] = list1
         # print(stock_dic)
+#更新列表，即收起来
     def updateStockList(self):
         printInfo('更新')
         self.init_treeWidget(stock_dic)
@@ -197,70 +183,66 @@ class MyUi(QMainWindow):
             self.ui.label_2.hide()
             self.ui.dateEdit_2.hide()
             self.ui.treeWidget_2.clear()
-
-    def openMenu(self,position):
-        indexes = self.ui.treeWidget.selectedIndexes()
-        item = self.ui.treeWidget.itemAt(position)
-        db_origin = ""
-        if item is None:
-            return
-        #if item.parent():
-         #   db_origin = item.parent().text(0)
-        collec = str(item.text(0).encode("utf-8"))
-        if len(indexes) > 0:
-            level = 0
-            index = indexes[0]
-            while index.parent().isValid():
-                index = index.parent()
-                level = level + 1
-            menu = QMenu()
-            #print((collec, db_origin))
-            if level ==0:
-                pass
-            else:
-                #keyarray = GetKeys(collec, db_origin)
-                #if "Open" in keyarray:
-                if self.ui.combobox.currentText()==u"K线":
-                    menu.addAction(QAction("Kline", menu, checkable=True))
-                    menu.addAction(QAction("Open", menu, checkable=True))
-                    menu.addAction(QAction("Close", menu, checkable=True))#open up different menu with different kind of graphs
-                    menu.addAction(QAction("High", menu, checkable=True))
-                    menu.addAction(QAction("Low", menu, checkable=True))
-                    menu.addAction(QAction("Volume", menu, checkable=True))
-                    #menu.addAction(QAction("P_change", menu, checkable=True))
-                    #menu.addAction(QAction("Turnover",menu,checkable=True))
-                if self.ui.combobox.currentText()==u"复权":
-                    menu.addAction(QAction("Kline", menu, checkable=True))
-                    menu.addAction(QAction("Open", menu, checkable=True))
-                    menu.addAction(QAction("Close", menu, checkable=True))
-                    menu.addAction(QAction("High", menu, checkable=True))
-                    menu.addAction(QAction("Low", menu, checkable=True))
-                    menu.addAction(QAction("Volume", menu, checkable=True))
-                    menu.addAction(QAction("Amount", menu, checkable=True))
-                if self.ui.combobox.currentText()==u"分笔数据":
-                    menu.addAction(QAction("分笔", menu, checkable=True))
-                if self.ui.combobox.currentText()==u"历史分钟":
-                    menu.addAction(QAction("Kline", menu, checkable=True))
-                    menu.addAction(QAction("Open", menu, checkable=True))
-                    menu.addAction(QAction("Close", menu, checkable=True))
-                    menu.addAction(QAction("High", menu, checkable=True))
-                    menu.addAction(QAction("Low", menu, checkable=True))
-                    menu.addAction(QAction("Volume", menu, checkable=True))
-                    menu.addAction(QAction("Amount", menu, checkable=True))
-                if self.ui.combobox.currentText()==u"十大股东":
-                    menu.addAction(QAction("季度饼图", menu, checkable=True))
-                    #menu.addAction(QAction("持股比例", menu, checkable=True))
-                #for g in keyarray:
-                #menu.addAction(QAction(g, menu, checkable=True))
-        menu.triggered.connect(lambda action: self.methodSelected(action, collec))
-        menu.exec_(self.ui.treeWidget.viewport().mapToGlobal(position))
-
+#第一栏的列表事件
     def methodSelected(self, action, collec):
         Choice = action.text()
         Stock = collec
         parent = QTreeWidgetItem(self.ui.treeWidget_2)
         parent.setText(0, Stock.decode("utf-8") + "-" + Choice)
+    def addStockClickAction(self,item,column):
+        if item is None:
+            return
+        text = item.text(0)
+        print('text = ' + text)
+        db_origin = ""
+        stock = str(item.text(0).encode("utf-8"))
+        action = ''
+        if self.ui.combobox.currentText()==u"K线":
+            action="Kline"
+        if self.ui.combobox.currentText()==u"复权":
+            action="Kline"
+        if self.ui.combobox.currentText()==u"分笔数据":
+            action="分笔"
+        if self.ui.combobox.currentText()==u"历史分钟":
+            action="Kline"
+        if self.ui.combobox.currentText()==u"十大股东":
+            action="季度饼图"
+        parent = QTreeWidgetItem(self.ui.treeWidget_2)
+        parent.setText(0, stock + "-" + action)
 
+    def showGraph(self,item,column):
+        if item is None:
+            return
+        startdate = self.ui.dateEdit.date()
+        startdate = startdate.toPyDate()
+        startdate = startdate.strftime("%Y/%m/%d")#转换成tushare 能识别的日期
+        enddate = self.ui.dateEdit_2.date()
+        enddate = enddate.toPyDate()
+        enddate = enddate.strftime("%Y/%m/%d")
+        option = self.ui.comboBox.currentText()
+        option = str(option)
+        width = self.ui.webView.width()#give width and height of user's screen so that graphs can be generated with dynamic size
+        height = self.ui.webView.height()
+        # print('------labels------')
+        # print(labels)
+        # print('-------ption------')
+        print(option)
+        print(startdate)
+        text = item.text(0)
+        arr = re.split('-',text)
+        code = arr[1]
+        self.downloadData(code,startdate,enddate,option)
+        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/kshape/index.html")) #path to read html file
+        local_url = QUrl.fromLocalFile(file_path)
+        print(type(local_url))
+        query = QUrlQuery()#添加参数code=号码
+        query.addQueryItem('code',code)
+        query.addQueryItem('ktype',option)
+        local_url.setQuery(query)
+        # local_url = local_url
+        print(local_url)
+        self.ui.webView.load(local_url)
+#第二个列表右击栏
     def openWidgetMenu(self,position):
         indexes = self.ui.treeWidget_2.selectedIndexes()
         item = self.ui.treeWidget_2.itemAt(position)
@@ -275,7 +257,7 @@ class MyUi(QMainWindow):
             #collec = str(item.text())
             menu.triggered.connect(lambda action: self.ListMethodSelected(action, item))
         menu.exec_(self.ui.treeWidget_2.viewport().mapToGlobal(position))
-
+#检讨选择事件
     def ListMethodSelected(self, action, item):
         if action.text() == "Delete":
             self.eraseItem()
@@ -286,73 +268,19 @@ class MyUi(QMainWindow):
             list1 = [self.tr(collec)]
             self.ui.listwidget.addItems(list1)
             self.eraseItem()
-
+#删除选择项
     def eraseItem(self):
         for x in self.ui.treeWidget_2.selectedItems():#delete with write click menu
             #item = self.ui.treewidget.takeItem(self.ui.treewidget.currentRow())
             sip.delete(x)
             #item.delete
+#刷新web
     def refreshWeb(self):
         file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/index.html")) #path to read html file
         local_url = QUrl.fromLocalFile(file_path)
         self.ui.webView.load(local_url)
         # self.ui.webView.reload()
-#展示对应stock的图表
-    def classify(self, folder):
-        startdate = self.ui.dateEdit.date()
-        startdate = startdate.toPyDate()
-        startdate = startdate.strftime("%Y/%m/%d")#converts date from dateedit to tushare readable date
-        enddate = self.ui.dateEdit_2.date()
-        enddate = enddate.toPyDate()
-        enddate = enddate.strftime("%Y/%m/%d")
-        option = self.ui.comboBox.currentText()
-        option = str(option)
-        #if (self.ui.treewidget) == 0:
-            #self.ui.label.setText("Need to select at least one query")
-            #return
-        root = self.ui.treeWidget_2.invisibleRootItem()# This is for iterating child items
-        child_count = root.childCount()
-        texts = []
-        if child_count==0:
-            return
-        for i in range(child_count):
-            item = root.child(i)
-            text = item.text(0)#with 3 part'stock_name'+'-'+'code'+'-'+action
-            texts.append(text)
-        labels = [k for k in texts]
-        #items = ([x.encode("utf-8") for x in labels])
-        width = self.ui.webView.width()#give width and height of user's screen so that graphs can be generated with dynamic size
-        height = self.ui.webView.height()
-        # print('------labels------')
-        print(labels)
-        # print('-------ption------')
-        print(option)
-        #labels:[u'名称-600462-Kline'] option：类型，D
-        # graphpage(labels, startdate,enddate,option,width, height)#labels:复权ork线or分笔 option:hfq, qfq or 15, 30, D, etc
-        # # self.ui.webView.reload()#refreshes webengine
-        # # self.ui.webView.repaint()
-        # # self.ui.webView.update()
-        # file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/render.html")) #path to read html file
-        # local_url = QUrl.fromLocalFile(file_path)
-        # self.ui.webView.load(local_url)
-        print(startdate)
-        code = ''
-        for index,tt in enumerate(labels):
-            print(tt)
-            arr = re.split('-',tt)
-            code = arr[1]
-            self.downloadData(arr[1],startdate,enddate,option)
-        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/kshape/index.html")) #path to read html file
-        local_url = QUrl.fromLocalFile(file_path)
-        print(type(local_url))
-        query = QUrlQuery()
-        query.addQueryItem('code',code)
-        query.addQueryItem('ktype',option)
-        local_url.setQuery(query)
-        # local_url = local_url
-        print(local_url)
-        self.ui.webView.load(local_url)
-
+#下载K线数据，json格式保存
     def downloadData(self,stocknumber,startdate,enddate,type='D'):
         startdata = startdate.encode("ascii").replace("/","-").replace("\n","")
         print(startdata)
