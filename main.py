@@ -276,7 +276,8 @@ class MyUi(QMainWindow):
             #item.delete
 #刷新web
     def refreshWeb(self):
-        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "index/kshape/index.html")) #path to read html file
+        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "test.html")) 
+#path to read html file "index/kshape/index.html"
         local_url = QUrl.fromLocalFile(file_path)
         self.ui.webView.load(local_url)
         # self.ui.webView.reload()

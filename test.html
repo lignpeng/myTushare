@@ -1,0 +1,59 @@
+<html>
+<head>
+  <!-- <script src="a.js"></script> -->
+  <script src="JsLoader.js"></script>
+  <script type="text/javascript">
+    loaderJs=function(sUrl,callback){
+      var head= document.getElementsByTagName('head')[0];
+      var script= document.createElement('script');
+      script.type= 'text/javascript';
+      script.onload = script.onreadystatechange = function() {
+      if (!this.readyState || this.readyState === "loaded" || this.readyState === "complete" ) {
+          abc("根据经验在ie7中，只能获得loaded和completed中的一个，不能都出现");
+          if(callback != undefined){
+            callback(sUrl)
+        }
+      // 根据经验在ie7中，只能获得loaded和completed中的一个，不能都出现
+      script.onload = script.onreadystatechange = null;
+      } };
+      script.src= sUrl;
+      head.appendChild(script);
+    }
+  alert('开始调用外部js')
+  loaderJs('a.js',function(str){
+    alert('加载成功！' + str)
+  })
+  //   window.onload = function(){
+  // 	 //引用abc函数
+  // 	// a.dd('600462-D');
+  // //   readTextFile('600462-D',function(text){
+  // //       alert(text)
+  // // })
+  //     loader.JsLoader.load('a.js',function(){
+  //         alert('加载a.js成功')
+  //         a.dd('600462-D');
+  //     })
+  //   };
+
+   </script>
+
+</head>
+
+<body>
+  <script type="text/javascript">
+    // dd('600462-D');
+    // window.onload = function(){
+     //引用abc函数
+      // var fun = window.dd
+      // fun('600462-D');
+    //   readTextFile('600462-D',function(text){
+    //       alert(text)
+    // })
+      // loader.JsLoader.load('a.js',function(){
+      //     alert('加载a.js成功')
+      // })
+    // };
+  </script>
+
+</body>
+</html>
