@@ -9,7 +9,7 @@
       script.type= 'text/javascript';
       script.onload = script.onreadystatechange = function() {
       if (!this.readyState || this.readyState === "loaded" || this.readyState === "complete" ) {
-          abc("根据经验在ie7中，只能获得loaded和completed中的一个，不能都出现");
+          // abc("根据经验在ie7中，只能获得loaded和completed中的一个，不能都出现");
           if(callback != undefined){
             callback(sUrl)
         }
@@ -20,8 +20,9 @@
       head.appendChild(script);
     }
   alert('开始调用外部js')
-  loaderJs('a.js',function(str){
-    alert('加载成功！' + str)
+  loaderJs('data.js',function(str){
+    dd = getMockData('aa')
+    alert('加载成功\n' + dd[0]+'\n'+dd[1])
   })
   //   window.onload = function(){
   // 	 //引用abc函数
