@@ -1,4 +1,5 @@
 #-*- coding:utf-8 -*-
+# coding: utf-8
 from __future__ import print_function
 import os,sys,sip,time
 from datetime import datetime,timedelta
@@ -16,6 +17,8 @@ import warnings
 import re
 import time
 import json
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 warnings.filterwarnings("ignore")
 list1 = []
@@ -41,8 +44,12 @@ class MyUi(QMainWindow):
         pastQL = QDate.fromString(pasttimeL, "yyyy/MM/dd")
 
         self.updateStockList()
+        self.ui.search_lineEdit.textChanged.connect(self.search_comp)
+        self.ui.search_btn.clicked.connect(self.search_comp)
         self.ui.treeWidget.itemDoubleClicked.connect(self.addStockClickAction)
+        #更新列表
         self.ui.update_stocklist_btn.clicked.connect(self.updateStockList)
+        #刷新web
         self.ui.refreshButton.clicked.connect(self.refreshWeb)
 
         try:
@@ -72,6 +79,7 @@ class MyUi(QMainWindow):
     def init_treeWidget(self, dic):
         self.ui.treeWidget.clear()
         if dic is None or not dic:
+            print('dic 不对')
             return#校验传参是否正确
 # 枚举字典，key，值
         for title,list1 in dic.items():
@@ -84,6 +92,7 @@ class MyUi(QMainWindow):
                 # print(index)
                 # print(name)
                 child.setText(0,name)
+        self.ui.treeWidget.expandAll()
     #获取股票列表
     def initStockBasic(useNet=True):
         global stock_dic
@@ -106,13 +115,14 @@ class MyUi(QMainWindow):
             stockBasicInfo.to_csv(dataInfoPath,encoding="utf8")
         list1 = []
         for i in range(len(stock_index)):
-            list1.append(stock_name_list[i] +'-'+ str(stock_index[i]).zfill(6))
+            list1.append(stock_name_list[i] + '-' + str(stock_index[i]).zfill(6))
         stock_dic = {}
         stock_dic['所有'] = list1
-        # print(stock_dic)
+        print(stock_dic)
 #更新列表，即收起来
     def updateStockList(self):
         printInfo('更新')
+        print(stock_dic)
         self.init_treeWidget(stock_dic)
     def code_sort_tree(self, companies):
         self.ui.treeWidget.clear()
@@ -129,18 +139,16 @@ class MyUi(QMainWindow):
     def search_comp(self, companies):
         self.ui.treeWidget.clear()
         text = self.ui.search_lineEdit.text()
-        filtered_codes = companies[companies['code'].str.contains(text)]
-        filtered_names = companies[companies['name'].str.contains(text)]
-        filtered_comps = filtered_codes.append(filtered_names)
-        code_list = filtered_comps["code"].tolist()
-        name_list = filtered_comps["name"].tolist()
-        parent = QTreeWidgetItem(self.ui.treeWidget)
-        parent.setText(0, "搜索结果")
-        for idx, val in enumerate(code_list):
-            child = QTreeWidgetItem(parent)
-            child.setText(0, name_list[idx] + "-" + str(val))
-        self.ui.treeWidget.expandToDepth(0)
-
+        if len(text) == 0 :
+            self.init_treeWidget(stock_dic)
+            return
+        print('text = ' + text)
+        print('companies : ' + companies)
+        list = stock_dic['所有']
+        # print(list)
+        filterlist = filter(lambda s:text in s,list)
+        # print(filterlist)
+        self.init_treeWidget({"搜索结果":filterlist})
 
     def modifycombo(self,pastQL,pastQ):
         if self.ui.combobox.currentText()==u"复权": #if 复权 is selected, clear all existing queries to avoid value conflict
@@ -190,6 +198,8 @@ class MyUi(QMainWindow):
         parent = QTreeWidgetItem(self.ui.treeWidget_2)
         parent.setText(0, Stock.decode("utf-8") + "-" + Choice)
     def addStockClickAction(self,item,column):
+        reload(sys)
+        sys.setdefaultencoding('utf8')
         if item is None:
             return
         text = item.text(0)
@@ -276,7 +286,8 @@ class MyUi(QMainWindow):
             #item.delete
 #刷新web
     def refreshWeb(self):
-        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "test.html")) 
+        printInfo('refreshWeb')
+        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "test.html"))
 #path to read html file "index/kshape/index.html"
         local_url = QUrl.fromLocalFile(file_path)
         self.ui.webView.load(local_url)
